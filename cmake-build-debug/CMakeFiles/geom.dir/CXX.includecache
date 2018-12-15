@@ -1,0 +1,26 @@
+#IncludeRegexLine: ^[ 	]*[#%][ 	]*(include|import)[ 	]*[<"]([^">]+)([">])
+
+#IncludeRegexScan: ^.*$
+
+#IncludeRegexComplain: ^$
+
+#IncludeRegexTransform: 
+
+/Users/lexolordan/Geom/main.cpp
+iostream
+-
+vector
+-
+algorithm
+-
+set
+-
+iostream
+-
+vector
+-
+set
+-
+map
+-
+
