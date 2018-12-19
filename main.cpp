@@ -102,20 +102,8 @@ private:
             }
         }
     }
-public:
-    MultiBelongingAlgorithm() = default;
 
-    MultiBelongingAlgorithm(const std::vector<value>& _points) : _polygon(Geometry::AdvancedPolygon<T>(_points)) {}
-
-    void setOrder() {
-        if (_polygon.OrientArea() > 0) {
-            _polygon.revertOrder();
-        }
-    }
-
-    void run() {
-        _answer_for_verticals();
-
+    void _answer_for_others() {
         auto cmp = [](const Geometry::Edge<T> &a, const Geometry::Edge<T> &b) {
             double x = std::max(a.minX().getX(), b.minX().getX());
             double ay = a.y(x), by = b.y(x);
@@ -149,6 +137,21 @@ public:
                     break;
             }
         }
+    }
+public:
+    MultiBelongingAlgorithm() = default;
+
+    MultiBelongingAlgorithm(const std::vector<value>& _points) : _polygon(Geometry::AdvancedPolygon<T>(_points)) {}
+
+    void setOrder() {
+        if (_polygon.OrientArea() > 0) {
+            _polygon.revertOrder();
+        }
+    }
+
+    void run() {
+        _answer_for_verticals();
+        _answer_for_others();
     }
 
     void setEvents() {

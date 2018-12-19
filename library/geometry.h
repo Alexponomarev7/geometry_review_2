@@ -65,9 +65,8 @@ namespace Geometry {
             return is;
         }
 
-        bool operator<(const Point& other) const {
-            if (_x != other._x) return _x < other._x;
-            return _y < other._y;
+        bool operator==(const Point& other) const {
+            return _x == other._x && _y == other._y;
         }
     };
 
