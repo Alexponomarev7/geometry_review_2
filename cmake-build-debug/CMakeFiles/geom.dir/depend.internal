@@ -5,4 +5,5 @@ CMakeFiles/geom.dir/library/geometry.cpp.o
  /Users/lexolordan/Geom/library/geometry.cpp
  /Users/lexolordan/Geom/library/geometry.h
 CMakeFiles/geom.dir/main.cpp.o
+ ../library/geometry.h
  /Users/lexolordan/Geom/main.cpp

@@ -4,5 +4,6 @@
 CMakeFiles/geom.dir/library/geometry.cpp.o: ../library/geometry.cpp
 CMakeFiles/geom.dir/library/geometry.cpp.o: ../library/geometry.h
 
+CMakeFiles/geom.dir/main.cpp.o: ../library/geometry.h
 CMakeFiles/geom.dir/main.cpp.o: ../main.cpp
 

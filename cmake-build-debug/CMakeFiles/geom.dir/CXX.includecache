@@ -6,6 +6,30 @@
 
 #IncludeRegexTransform: 
 
+../library/geometry.h
+iostream
+-
+vector
+-
+set
+-
+map
+-
+
+/Users/lexolordan/Geom/library/geometry.cpp
+geometry.h
+/Users/lexolordan/Geom/library/geometry.h
+
+/Users/lexolordan/Geom/library/geometry.h
+iostream
+-
+vector
+-
+set
+-
+map
+-
+
 /Users/lexolordan/Geom/main.cpp
 iostream
 -
@@ -15,12 +39,6 @@ algorithm
 -
 set
 -
-iostream
--
-vector
--
-set
--
-map
--
+geometry.h
+/Users/lexolordan/Geom/geometry.h
 
