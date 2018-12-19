@@ -166,7 +166,9 @@ public:
         for (auto e : _query) {
             _events.push_back(Event<T>(e.getId(), Event<T>::QUERY, e));
         }
+    }
 
+    void sortEvents() {
         sort(_events.begin(), _events.end());
     }
 
@@ -239,6 +241,7 @@ public:
         _algorithm.setOrder();
         _algorithm.setEdges();
         _algorithm.setEvents();
+        _algorithm.sortEvents();
     }
 
     void Calculate() {
