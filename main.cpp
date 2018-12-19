@@ -69,6 +69,34 @@ private:
         return 0;
     }
 
+    std::vector<Event<T>> _prepare(int x) {
+        std::vector<Event<T>> ev;
+        int j = 0;
+        for (Geometry::Edge<T> i : _polygon.getVerticalEdges()[x]) {
+            ev.push_back(Event<T>(j, Event<T>::Type::OPEN, i.minY()));
+            ev.push_back(Event<T>(j, Event<T>::Type::CLOSE, i.maxY()));
+            j++;
+        }
+
+        for (T i : _x_points[x]) {
+            ev.push_back(Event<T>(i.getId(), Event<T>::Type::QUERY, i));
+        }
+
+        return ev;
+    }
+
+    void _peform(const std::vector<Event<T>> &ev) {
+        int balance = 0;
+        for (const Event<T>& i : ev) {
+            if (i.getType() == Event<T>::Type::OPEN)
+                balance++;
+            if (i.getType() == Event<T>::Type::CLOSE)
+                balance--;
+            if (i.getType() == Event<T>::Type::QUERY && balance > 0)
+                _ans[i.getId()] = Geometry::State::BORDER;
+        }
+    }
+
     void _answer_for_verticals() {
         auto cmp = [=](Event<T> a, Event<T> b) {
             if (a.getPoint().getY() == b.getPoint().getY()) {
@@ -79,27 +107,9 @@ private:
         };
 
         for (auto x : _x_points) {
-            std::vector<Event<T>> ev;
-            int j = 0;
-            for (Geometry::Edge<T> i : _polygon.getVerticalEdges()[x.first]) {
-                ev.push_back(Event<T>(j, Event<T>::Type::OPEN, i.minY()));
-                ev.push_back(Event<T>(j, Event<T>::Type::CLOSE, i.maxY()));
-                j++;
-            }
-
-            for (T i : _x_points[x.first]) {
-                ev.push_back(Event<T>(i.getId(), Event<T>::Type::QUERY, i));
-            }
+            std::vector<Event<T>> ev = std::move(_prepare(x.first));
             sort(ev.begin(), ev.end(), cmp);
-            int balance = 0;
-            for (Event<T>& i : ev) {
-                if (i.getType() == Event<T>::Type::OPEN)
-                    balance++;
-                if (i.getType() == Event<T>::Type::CLOSE)
-                    balance--;
-                if (i.getType() == Event<T>::Type::QUERY && balance > 0)
-                    _ans[i.getId()] = Geometry::State::BORDER;
-            }
+            _peform(ev);
         }
     }
 
@@ -141,7 +151,12 @@ private:
 public:
     MultiBelongingAlgorithm() = default;
 
-    MultiBelongingAlgorithm(const std::vector<value>& _points) : _polygon(Geometry::AdvancedPolygon<T>(_points)) {}
+    MultiBelongingAlgorithm(const std::vector<value>& _points, const std::vector<value>& _queries) :
+                            _polygon(Geometry::AdvancedPolygon<T>(_points)) {
+        reserve_query(_queries.size());
+        for (auto q : _queries)
+            push_query(q);
+    }
 
     void setOrder() {
         if (_polygon.OrientArea() > 0) {
@@ -213,7 +228,7 @@ private:
     using size_type = size_t;
 
     size_t _size;
-    MultiBelongingAlgorithm<value> _algorithm;
+    MultiBelongingAlgorithm<value> *_algorithm;
 
     std::string _serialize(Geometry::State state) {
         switch (state) {
@@ -226,51 +241,54 @@ private:
         }
 
     }
+
+    std::vector<Geometry::State> _ans;
+    std::vector<value> _points, _queries;
 public:
     Test() = default;
 
     void Input(std::istream &is) {
         is >> _size;
 
-        std::vector<value> points(_size);
+        _points.resize(_size);
         for (size_t i = 0; i < _size; ++i) {
-            is >> points[i];
-            points[i].setId(i);
+            is >> _points[i];
+            _points[i].setId(i);
         }
-        _algorithm = MultiBelongingAlgorithm<value>(points);
     }
 
     void Query(std::istream &is) {
         is >> _size;
 
-        _algorithm.reserve_query(_size);
-        value point;
+        _queries.resize(_size);
         for (size_t i = 0; i < _size; ++i) {
-            is >> point;
-            point.setId(i);
-            _algorithm.push_query(point);
+            is >> _queries[i];
+            _queries[i].setId(i);
         }
     }
 
     void Prepare() {
-        _algorithm.setOrder();
-        _algorithm.setEdges();
-        _algorithm.setEvents();
-        _algorithm.sortEvents();
+        _algorithm = new MultiBelongingAlgorithm<value>(_points, _queries);
+
+        _algorithm->setOrder();
+        _algorithm->setEdges();
+        _algorithm->setEvents();
+        _algorithm->sortEvents();
     }
 
     void Calculate() {
-        _algorithm.run();
+        _algorithm->run();
+        _ans = _algorithm->ans();
     }
 
     void Output(std::ostream &os) {
-        for (auto state : _algorithm.ans()) {
+        for (auto state : _ans) {
             os << _serialize(state) << '\n';
         }
     }
 
     void Clear() {
-        _algorithm.clear();
+        delete _algorithm;
     }
 };
 
@@ -310,6 +328,7 @@ void solve(std::istream &is, std::ostream &os) {
     for (int i = 0; i < tests; ++i) {
         test[i].Prepare();
         test[i].Calculate();
+        test[i].Clear();
     }
 
     for (int i = 0; i < tests; ++i) {

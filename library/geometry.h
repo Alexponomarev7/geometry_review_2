@@ -65,8 +65,9 @@ namespace Geometry {
             return is;
         }
 
-        bool operator==(const Point& other) const {
-            return _x == other._x && _y == other._y;
+        bool operator<(const Point& other) const {
+            if (_x != other._x) return _x < other._x;
+            return _y < other._y;
         }
     };
 
@@ -172,11 +173,11 @@ namespace Geometry {
             return _points;
         }
 
-        int next_point(int index) const {
-            if (index == _points.size()) {
+        inline int next_point(int index) const {
+            if (index + 1 == _points.size()) {
                 return 0;
             }
-            return index;
+            return index + 1;
         }
     };
 
