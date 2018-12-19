@@ -194,7 +194,10 @@ namespace Geometry {
         std::map<int, std::vector<Edge<value>>> _vertical_edges;
 
         std::function<bool(const T&, const T&)> cmp = [](const T& a, const T& b) {
-            return true;
+            if (a.getX() == b.getX()) {
+                return a.getY() < b.getY();
+            }
+            return a.getX() < b.getX();
         };
 
         std::multiset<T, decltype(cmp)> _verticies;
