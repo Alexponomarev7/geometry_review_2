@@ -115,11 +115,12 @@ private:
 
     void _answer_for_others() {
         auto cmp = [](const Geometry::Edge<T> &a, const Geometry::Edge<T> &b) {
-            double x = std::max(a.minX().getX(), b.minX().getX());
-            double ay = a.y(x), by = b.y(x);
-            double x1 = std::min(a.maxX().getX(), b.maxX().getX());
-            double ay1 = a.y(x1), by1 = b.y(x1);
-            return (ay < by || (ay == by && ay1 < by1));
+            double min_x = std::max(a.minX().getX(), b.minX().getX());
+            double max_x = std::min(a.maxX().getX(), b.maxX().getX());
+
+            double fleft_y = a.y(min_x), fright_y = b.y(min_x);
+            double sleft_y = a.y(max_x), sright_y = b.y(max_x);
+            return (fleft_y < fright_y || (fleft_y == fright_y && sleft_y < sright_y));
         };
         std::multiset<Geometry::Edge<T>, decltype(cmp)> open(cmp);
 

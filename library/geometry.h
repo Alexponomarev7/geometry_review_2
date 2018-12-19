@@ -5,6 +5,7 @@
 #include <vector>
 #include <set>
 #include <map>
+#include <functional>
 
 namespace Geometry {
     enum Position {
@@ -65,9 +66,8 @@ namespace Geometry {
             return is;
         }
 
-        bool operator<(const Point& other) const {
-            if (_x != other._x) return _x < other._x;
-            return _y < other._y;
+        bool operator==(const Point& other) const {
+            return _x == other._x && _y == other._y;
         }
     };
 
@@ -192,11 +192,16 @@ namespace Geometry {
 
         std::vector<Edge<value>> _edges;
         std::map<int, std::vector<Edge<value>>> _vertical_edges;
-        std::multiset<T> _verticies;
-    public:
-        AdvancedPolygon() = default;
 
-        explicit AdvancedPolygon(std::vector<value> _points) : Polygon<T>(_points) {
+        std::function<bool(const T&, const T&)> cmp = [](const T& a, const T& b) {
+            return true;
+        };
+
+        std::multiset<T, decltype(cmp)> _verticies;
+    public:
+        AdvancedPolygon() : _verticies(cmp) {};
+
+        explicit AdvancedPolygon(std::vector<value> _points) : Polygon<T>(_points), _verticies(cmp) {
             for (auto p : _points)
                 _verticies.insert(p);
         }
@@ -226,7 +231,7 @@ namespace Geometry {
             return sq;
         }
 
-        const std::multiset<value>& getVerticies() const {
+        const std::multiset<value, decltype(cmp)>& getVerticies() const {
             return _verticies;
         };
 
