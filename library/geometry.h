@@ -7,10 +7,16 @@
 #include <map>
 
 namespace Geometry {
-    enum POSITION {
+    enum Position {
         VERTICAL,
         UP,
         DOWN
+    };
+
+    enum State {
+        OUTSIDE,
+        INSIDE,
+        BORDER,
     };
 
     template <class T>
@@ -74,11 +80,9 @@ namespace Geometry {
         using pointer = T*;
         using size_type = size_t;
 
-        size_type _id;
         value _left, _right;
-        POSITION _position;
     public:
-        Segment(const_reference &a, const_reference &b, size_type id = -1) : _left(a), _right(b), _id(id) {}
+        Segment(const_reference &a, const_reference &b) : _left(a), _right(b) {}
 
         const_reference first() const {
             return _left;
@@ -105,10 +109,6 @@ namespace Geometry {
         }
 
 
-        size_type getId() const {
-            return _id;
-        }
-
         double y(double x) const {
             if (minX().getX() == maxX().getX())
                 return first().getY();
@@ -116,18 +116,10 @@ namespace Geometry {
             return minX().getY() + (double)((maxX().getY() - minX().getY()) * (x - minX().getX()))
                                    / (maxX().getX() - minX().getX());
         }
-
-        void setPosition(POSITION position) {
-            _position = position;
-        }
-
-        POSITION getPosition() const {
-            return _position;
-        }
     };
 
-    template <class T>
-    class Polygon {
+    template<class T>
+    class Edge : public Segment<T> {
     private:
         using value = T;
         using reference = T&;
@@ -135,68 +127,117 @@ namespace Geometry {
         using pointer = T*;
         using size_type = size_t;
 
+        size_type _id;
+        Position _position;
+    public:
+        Edge() : Segment<T>() {}
+
+        Edge(const_reference &a, const_reference &b, size_type id = 0) : Segment<T>(a, b) {
+            _id = id;
+        }
+
+        size_type getId() const {
+            return _id;
+        }
+
+        void setPosition(Position position) {
+            _position = position;
+        }
+
+        Position getPosition() const {
+            return _position;
+        }
+    };
+
+
+    template <class T>
+    class Polygon {
+    protected:
+        using value = T;
+        using reference = T&;
+        using const_reference = const T&;
+        using pointer = T*;
+        using size_type = size_t;
+
         std::vector<value> _points;
-        std::vector<Segment<value>> _edges;
-        std::map<int, std::vector<Segment<value>>> _vertical_edges;
-        std::multiset<T> _verticies;
     public:
         Polygon() = default;
 
-        Polygon(std::vector<value> _points) : _points(_points) {
+        explicit Polygon(std::vector<value> _points) : _points(_points) {}
+
+        void revertOrder() {
+            std::reverse(_points.begin(), _points.end());
+        }
+
+        const std::vector<value>& getPoints() const {
+            return _points;
+        }
+
+        int next_point(int index) const {
+            if (index == _points.size()) {
+                return 0;
+            }
+            return index;
+        }
+    };
+
+    template <class T>
+    class AdvancedPolygon : public Polygon<T> {
+    private:
+        using value = T;
+        using reference = T&;
+        using const_reference = const T&;
+        using pointer = T*;
+        using size_type = size_t;
+
+        std::vector<Edge<value>> _edges;
+        std::map<int, std::vector<Edge<value>>> _vertical_edges;
+        std::multiset<T> _verticies;
+    public:
+        AdvancedPolygon() = default;
+
+        explicit AdvancedPolygon(std::vector<value> _points) : Polygon<T>(_points) {
             for (auto p : _points)
                 _verticies.insert(p);
         }
 
         void setEdges() {
-            for (size_type i = 0; i < _points.size(); ++i) {
-                _edges.push_back(Geometry::Segment<T>(_points[i], _points[(i + 1) % _points.size()], i));
-                if (_points[i].getX() == _points[(i + 1) % _points.size()].getX()) {
-                    _vertical_edges[_points[i].getX()].push_back(_edges.back());
+            for (size_type i = 0; i < Polygon<T>::_points.size(); ++i) {
+                _edges.push_back(Geometry::Edge<T>(Polygon<T>::_points[i], Polygon<T>::_points[Polygon<T>::next_point(i)], i));
+                if (Polygon<T>::_points[i].getX() == Polygon<T>::_points[Polygon<T>::next_point(i)].getX()) {
+                    _vertical_edges[Polygon<T>::_points[i].getX()].push_back(_edges.back());
                 }
 
                 if (_edges.back().first().getX() < _edges.back().second().getX()) {
-                    _edges.back().setPosition(Geometry::POSITION::DOWN);
+                    _edges.back().setPosition(Geometry::Position::DOWN);
                 } else if (_edges.back().first().getX() == _edges.back().second().getX()){
-                    _edges.back().setPosition(Geometry::POSITION::VERTICAL);
+                    _edges.back().setPosition(Geometry::Position::VERTICAL);
                 } else {
-                    _edges.back().setPosition(Geometry::POSITION::UP);
+                    _edges.back().setPosition(Geometry::Position::UP);
                 }
             }
         }
 
-        double square() const {
+        double OrientArea() const {
             double sq = 0;
-            for (size_type i = 0; i < _points.size(); ++i) {
-                sq += _points[i] ^ _points[(i + 1) % _points.size()];
+            for (size_type i = 0; i < Polygon<T>::_points.size(); ++i) {
+                sq += Polygon<T>::_points[i] ^ Polygon<T>::_points[Polygon<T>::next_point(i)];
             }
             return sq;
-        }
-
-        void revertOrder() {
-            std::reverse(_points.begin(), _points.end());
         }
 
         const std::multiset<value>& getVerticies() const {
             return _verticies;
         };
 
-        const std::vector<value>& getPoints() const {
-            return _points;
-        }
-
-        std::map<int, std::vector<Segment<T>>>& getVerticalEdges() {
+        std::map<int, std::vector<Edge<T>>>& getVerticalEdges() {
             return _vertical_edges;
         }
 
-        const std::vector<Segment<value>>& getEdges() const {
+        const std::vector<Edge<value>>& getEdges() const {
             return _edges;
         }
-    };
 
-    enum STATE {
-        OUTSIDE,
-        INSIDE,
-        BORDER,
     };
 }
 

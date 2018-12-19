@@ -11,17 +11,17 @@ private:
     template <class U>
     class Event {
     public:
-        enum TYPE {
+        enum Type {
             QUERY,
             CLOSE,
             OPEN,
         };
     private:
         ssize_t _id;
-        TYPE type;
+        Type type;
         U p;
     public:
-        Event(ssize_t id, TYPE type, U p) : _id(id), type(type), p(p) {}
+        Event(ssize_t id, Type type, U p) : _id(id), type(type), p(p) {}
 
         const U& getPoint() const {
             return p;
@@ -31,7 +31,7 @@ private:
             return _id;
         }
 
-        TYPE getType() const {
+        Type getType() const {
             return type;
         }
 
@@ -51,19 +51,19 @@ private:
     using size_type = size_t;
 
     std::vector<value> _query;
-    std::vector<Geometry::STATE> _ans;
+    std::vector<Geometry::State> _ans;
 
     std::vector<Event<T>> _events;
-    Geometry::Polygon<T> _polygon;
+    Geometry::AdvancedPolygon<T> _polygon;
     std::map<int, std::vector<T>> _x_points;
 
-    int _redirection(typename Event<T>::TYPE e) {
+    int _redirection(typename Event<T>::Type e) {
         switch (e) {
-            case Event<T>::TYPE::OPEN:
+            case Event<T>::Type::OPEN:
                 return -1;
-            case Event<T>::TYPE::CLOSE:
+            case Event<T>::Type::CLOSE:
                 return 1;
-            case Event<T>::TYPE::QUERY:
+            case Event<T>::Type::QUERY:
                 return 0;
         }
         return 0;
@@ -81,36 +81,34 @@ private:
         for (auto x : _x_points) {
             std::vector<Event<T>> ev;
             int j = 0;
-            for (Geometry::Segment<T> i : _polygon.getVerticalEdges()[x.first]) {
-                ev.push_back(Event<T>(j, Event<T>::TYPE::OPEN, i.minY()));
-                ev.push_back(Event<T>(j, Event<T>::TYPE::CLOSE, i.maxY()));
+            for (Geometry::Edge<T> i : _polygon.getVerticalEdges()[x.first]) {
+                ev.push_back(Event<T>(j, Event<T>::Type::OPEN, i.minY()));
+                ev.push_back(Event<T>(j, Event<T>::Type::CLOSE, i.maxY()));
                 j++;
             }
 
-            j = 0;
             for (T i : _x_points[x.first]) {
-                ev.push_back(Event<T>(i.getId(), Event<T>::TYPE::QUERY, i));
-                j++;
+                ev.push_back(Event<T>(i.getId(), Event<T>::Type::QUERY, i));
             }
             sort(ev.begin(), ev.end(), cmp);
             int balance = 0;
             for (Event<T>& i : ev) {
-                if (i.getType() == Event<T>::TYPE::OPEN)
+                if (i.getType() == Event<T>::Type::OPEN)
                     balance++;
-                if (i.getType() == Event<T>::TYPE::CLOSE)
+                if (i.getType() == Event<T>::Type::CLOSE)
                     balance--;
-                if (i.getType() == Event<T>::TYPE::QUERY && balance > 0)
-                    _ans[i.getId()] = Geometry::STATE::BORDER;
+                if (i.getType() == Event<T>::Type::QUERY && balance > 0)
+                    _ans[i.getId()] = Geometry::State::BORDER;
             }
         }
     }
 public:
     MultiBelongingAlgorithm() = default;
 
-    MultiBelongingAlgorithm(const std::vector<value>& _points) : _polygon(Geometry::Polygon<T>(_points)) {}
+    MultiBelongingAlgorithm(const std::vector<value>& _points) : _polygon(Geometry::AdvancedPolygon<T>(_points)) {}
 
     void setOrder() {
-        if (_polygon.square() > 0) {
+        if (_polygon.OrientArea() > 0) {
             _polygon.revertOrder();
         }
     }
@@ -118,14 +116,14 @@ public:
     void run() {
         _answer_for_verticals();
 
-        auto cmp = [](const Geometry::Segment<T> &a, const Geometry::Segment<T> &b) {
+        auto cmp = [](const Geometry::Edge<T> &a, const Geometry::Edge<T> &b) {
             double x = std::max(a.minX().getX(), b.minX().getX());
             double ay = a.y(x), by = b.y(x);
             double x1 = std::min(a.maxX().getX(), b.maxX().getX());
             double ay1 = a.y(x1), by1 = b.y(x1);
             return (ay < by || (ay == by && ay1 < by1));
         };
-        std::multiset<Geometry::Segment<T>, decltype(cmp)> open(cmp);
+        std::multiset<Geometry::Edge<T>, decltype(cmp)> open(cmp);
 
         for (auto e : _events) {
             switch (e.getType()) {
@@ -138,15 +136,15 @@ public:
                 case Event<T>::QUERY:
                     if (open.empty())
                         continue;
-                    Geometry::Segment<T> query(e.getPoint(), e.getPoint());
+                    Geometry::Edge<T> query(e.getPoint(), e.getPoint());
 
                     auto it = open.lower_bound(query);
                     if (it != open.end() && it->y(e.getPoint().getX()) == (double)e.getPoint().getY())
-                        _ans[e.getId()] = Geometry::STATE::BORDER;
+                        _ans[e.getId()] = Geometry::State::BORDER;
                     if (it != open.begin()) {
                         --it;
-                        if (it->getPosition() == Geometry::POSITION::UP)
-                            _ans[e.getId()] = std::max(_ans[e.getId()], Geometry::STATE::INSIDE);
+                        if (it->getPosition() == Geometry::Position::UP)
+                            _ans[e.getId()] = std::max(_ans[e.getId()], Geometry::State::INSIDE);
                     }
                     break;
             }
@@ -156,7 +154,7 @@ public:
     void setEvents() {
         size_type id = 0;
         for (auto e : _polygon.getEdges()) {
-            if (e.getPosition() != Geometry::POSITION::VERTICAL) {
+            if (e.getPosition() != Geometry::Position::VERTICAL) {
                 _events.push_back(Event<T>(e.getId(), Event<T>::OPEN, e.minX()));
                 _events.push_back(Event<T>(e.getId(), Event<T>::CLOSE, e.maxX()));
             }
@@ -184,7 +182,7 @@ public:
     template <class U>
     void push_query(U&& p) {
         if (_polygon.getVerticies().count(std::forward<T>(p)))
-            _ans[p.getId()] = Geometry::STATE::BORDER;
+            _ans[p.getId()] = Geometry::State::BORDER;
 
         _query.push_back(std::forward<T>(p));
         _x_points[p.getX()].push_back(std::forward<T>(p));
@@ -197,13 +195,13 @@ public:
         _x_points.clear();
     }
 
-    std::vector<Geometry::STATE> ans() const {
+    std::vector<Geometry::State> ans() const {
         return _ans;
     }
 };
 
 template <class T>
-class TestCase {
+class Test {
 private:
     using value = T;
     using reference = T&;
@@ -213,7 +211,21 @@ private:
 
     size_t _size;
     MultiBelongingAlgorithm<value> _algorithm;
+
+    std::string _serialize(Geometry::State state) {
+        switch (state) {
+            case Geometry::State::INSIDE:
+                return "INSIDE";
+            case Geometry::State::OUTSIDE:
+                return "OUTSIDE";
+            case Geometry::State::BORDER:
+                return "BORDER";
+        }
+
+    }
 public:
+    Test() = default;
+
     void Input(std::istream &is) {
         is >> _size;
 
@@ -250,17 +262,7 @@ public:
 
     void Output(std::ostream &os) {
         for (auto state : _algorithm.ans()) {
-            switch (state) {
-                case Geometry::STATE::INSIDE:
-                    os << "INSIDE\n";
-                    break;
-                case Geometry::STATE::OUTSIDE:
-                    os << "OUTSIDE\n";
-                    break;
-                case Geometry::STATE::BORDER:
-                    os << "BORDER\n";
-                    break;
-            }
+            os << _serialize(state) << '\n';
         }
     }
 
@@ -269,22 +271,48 @@ public:
     }
 };
 
+template <class T>
+class TestCase {
+private:
+    using value = T;
+    using reference = T&;
+    using const_reference = const T&;
+    using pointer = T*;
+    using size_type = size_t;
+
+    size_t _size;
+    std::vector<Test<T>> _tests;
+public:
+    TestCase() = default;
+
+    TestCase(size_t _size) {
+        _tests.resize(_size);
+    }
+
+    Test<T>& operator[](int index) {
+        return _tests[index];
+    }
+};
+
 void solve(std::istream &is, std::ostream &os) {
     uint32_t tests;
     is >> tests;
 
-    TestCase<Geometry::Point<double>> test;
+    TestCase<Geometry::Point<double>> test(tests);
     for (int i = 0; i < tests; ++i) {
-        test.Input(is);
-        test.Query(is);
-
-        test.Prepare();
-        test.Calculate();
-
-        test.Output(std::cout);
-
-        test.Clear();
+        test[i].Input(is);
+        test[i].Query(is);
     }
+
+    for (int i = 0; i < tests; ++i) {
+        test[i].Prepare();
+        test[i].Calculate();
+    }
+
+    for (int i = 0; i < tests; ++i) {
+        test[i].Output(std::cout);
+    }
+
 }
 
 int main() {
